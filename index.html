@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>2진수 카드</title>
+<style>
+  :root {
+    --bg: #f4f7fb;
+    --ink: #1f2a44;
+    --accent: #3b6df0;
+    --accent-dark: #2a50bd;
+    --card-front: #ffffff;
+    --dot: #3b6df0;
+    --muted: #6b7a99;
+    --on: #ffb703;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    padding: 24px 16px 40px;
+  }
+  main { width: 100%; max-width: 760px; text-align: center; }
+  h1 { margin: 0 0 6px; font-size: clamp(1.5rem, 4vw, 2rem); }
+  .sub { margin: 0 0 24px; color: var(--muted); font-size: 1rem; }
+
+  /* 카드 줄 */
+  .row {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: clamp(8px, 2vw, 18px);
+    perspective: 1000px;
+  }
+  .col { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+
+  .card {
+    width: 100%;
+    aspect-ratio: 3 / 4;
+    border: none;
+    padding: 0;
+    background: none;
+    cursor: pointer;
+    position: relative;
+    transform-style: preserve-3d;
+    transition: transform .5s cubic-bezier(.3,.7,.3,1);
+    -webkit-tap-highlight-color: transparent;
+  }
+  .card.up { transform: rotateY(180deg); }
+  .card:focus-visible { outline: 3px solid var(--accent); outline-offset: 4px; border-radius: 14px; }
+  .card:hover:not(.up) { transform: translateY(-4px); }
+  .card.up:hover { transform: rotateY(180deg) translateY(-4px); }
+
+  .face {
+    position: absolute; inset: 0;
+    border-radius: 14px;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    box-shadow: 0 4px 12px rgba(31,42,68,.18);
+  }
+  /* 뒷면(처음에 보이는 면): 무늬만 있고 점이 없음 */
+  .back {
+    background:
+      repeating-linear-gradient(45deg, rgba(255,255,255,.12) 0 8px, transparent 8px 16px),
+      linear-gradient(160deg, #5b86f7, #2a50bd);
+    border: 4px solid #fff;
+    outline: 2px solid #2a50bd;
+  }
+  /* 앞면: 점이 있는 면 */
+  .front {
+    background: var(--card-front);
+    transform: rotateY(180deg);
+    border: 3px solid var(--accent);
+    display: flex; align-items: center; justify-content: center;
+    padding: 12%;
+  }
+  .dots {
+    display: grid;
+    gap: 8%;
+    width: 100%;
+    justify-items: center;
+    align-items: center;
+  }
+  .dot {
+    width: 100%;
+    max-width: 22px;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: var(--dot);
+  }
+  .c16 .dots { grid-template-columns: repeat(4, 1fr); }
+  .c8  .dots { grid-template-columns: repeat(4, 1fr); }
+  .c4  .dots { grid-template-columns: repeat(2, 1fr); }
+  .c2  .dots { grid-template-columns: repeat(2, 1fr); }
+  .c1  .dots { grid-template-columns: repeat(1, 1fr); }
+  .c1 .dot, .c2 .dot, .c4 .dot { max-width: 34px; }
+
+  .label { font-weight: 700; font-size: clamp(1rem, 3vw, 1.3rem); color: var(--muted); }
+
+  .bit {
+    width: clamp(36px, 10vw, 56px);
+    height: clamp(44px, 12vw, 64px);
+    display: flex; align-items: center; justify-content: center;
+    font-size: clamp(1.6rem, 5vw, 2.3rem);
+    font-weight: 800;
+    border-radius: 10px;
+    background: #e3e9f5;
+    color: var(--muted);
+    transition: background .3s, color .3s, transform .3s;
+    font-variant-numeric: tabular-nums;
+  }
+  .bit.on { background: var(--on); color: #3a2a00; transform: scale(1.08); }
+
+  /* 결과 패널 */
+  .panel {
+    margin-top: 26px;
+    background: #fff;
+    border-radius: 18px;
+    padding: 20px 16px;
+    box-shadow: 0 4px 14px rgba(31,42,68,.1);
+  }
+  .result-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+  .box {
+    background: var(--bg);
+    border-radius: 14px;
+    padding: 14px 8px;
+  }
+  .box h2 { margin: 0 0 6px; font-size: 1rem; color: var(--muted); font-weight: 600; }
+  .big { font-size: clamp(2rem, 8vw, 3.2rem); font-weight: 800; line-height: 1.1; font-variant-numeric: tabular-nums; }
+  .big small { font-size: .45em; color: var(--muted); font-weight: 600; margin-left: 2px; }
+  .equation { margin-top: 16px; font-size: clamp(1rem, 3.5vw, 1.3rem); min-height: 1.6em; }
+  .equation b { color: var(--accent-dark); }
+
+  .buttons { margin-top: 20px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+  button.act {
+    font: inherit; font-weight: 700;
+    padding: 12px 20px;
+    border-radius: 999px;
+    border: 2px solid var(--accent);
+    background: #fff; color: var(--accent-dark);
+    cursor: pointer;
+  }
+  button.act:hover { background: var(--accent); color: #fff; }
+  button.act:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+  .hint { margin-top: 18px; color: var(--muted); font-size: .95rem; line-height: 1.6; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .card, .bit { transition: none; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>🃏 2진수 카드</h1>
+  <p class="sub">카드를 눌러 뒤집어 보세요. 점이 보이는 카드(앞면)의 수를 더하면 10진수가 돼요!</p>
+
+  <div class="row" id="row"></div>
+
+  <section class="panel" aria-live="polite">
+    <div class="result-grid">
+      <div class="box">
+        <h2>10진수 (점이 보이는 카드의 합)</h2>
+        <div class="big" id="dec">0</div>
+      </div>
+      <div class="box">
+        <h2>2진수 (앞면 = 1, 뒷면 = 0)</h2>
+        <div class="big" id="bin">00000<small>(2)</small></div>
+      </div>
+    </div>
+    <div class="equation" id="eq"></div>
+  </section>
+
+  <div class="buttons">
+    <button class="act" id="reset">모두 뒷면으로</button>
+    <button class="act" id="all">모두 앞면으로</button>
+    <button class="act" id="random">무작위로 섞기</button>
+  </div>
+
+  <p class="hint">
+    💡 카드 5장으로 0부터 31까지 만들 수 있어요.<br>
+    오른쪽 카드부터 1, 2, 4, 8, 16 — 한 칸 왼쪽으로 갈수록 2배가 돼요.
+  </p>
+</main>
+
+<script>
+(function () {
+  var VALUES = [16, 8, 4, 2, 1];
+  var state = VALUES.map(function () { return false; }); // false = 뒷면(0), true = 앞면(1)
+
+  var row = document.getElementById('row');
+  var cards = [];
+  var bits = [];
+
+  VALUES.forEach(function (v, i) {
+    var col = document.createElement('div');
+    col.className = 'col';
+
+    var btn = document.createElement('button');
+    btn.className = 'card c' + v;
+    btn.type = 'button';
+    btn.setAttribute('aria-pressed', 'false');
+    btn.setAttribute('aria-label', v + ' 카드, 현재 뒷면');
+
+    var back = document.createElement('div');
+    back.className = 'face back';
+
+    var front = document.createElement('div');
+    front.className = 'face front';
+    var dots = document.createElement('div');
+    dots.className = 'dots';
+    for (var d = 0; d < v; d++) {
+      var dot = document.createElement('span');
+      dot.className = 'dot';
+      dots.appendChild(dot);
+    }
+    front.appendChild(dots);
+
+    btn.appendChild(back);
+    btn.appendChild(front);
+    btn.addEventListener('click', function () { state[i] = !state[i]; render(); });
+
+    var label = document.createElement('div');
+    label.className = 'label';
+    label.textContent = v;
+
+    var bit = document.createElement('div');
+    bit.className = 'bit';
+    bit.textContent = '0';
+
+    col.appendChild(btn);
+    col.appendChild(label);
+    col.appendChild(bit);
+    row.appendChild(col);
+
+    cards.push(btn);
+    bits.push(bit);
+  });
+
+  var decEl = document.getElementById('dec');
+  var binEl = document.getElementById('bin');
+  var eqEl = document.getElementById('eq');
+
+  function render() {
+    var sum = 0, binary = '', parts = [];
+    VALUES.forEach(function (v, i) {
+      var on = state[i];
+      cards[i].classList.toggle('up', on);
+      cards[i].setAttribute('aria-pressed', on ? 'true' : 'false');
+      cards[i].setAttribute('aria-label', v + ' 카드, 현재 ' + (on ? '앞면' : '뒷면'));
+      bits[i].textContent = on ? '1' : '0';
+      bits[i].classList.toggle('on', on);
+      binary += on ? '1' : '0';
+      if (on) { sum += v; parts.push(v); }
+    });
+    decEl.textContent = sum;
+    binEl.innerHTML = binary + '<small>(2)</small>';
+    eqEl.innerHTML = parts.length
+      ? '<b>' + parts.join(' + ') + ' = ' + sum + '</b>'
+      : '앞면인 카드가 없어요. 합은 <b>0</b>!';
+  }
+
+  function setAll(fn) {
+    state = state.map(fn);
+    render();
+  }
+  document.getElementById('reset').addEventListener('click', function () { setAll(function () { return false; }); });
+  document.getElementById('all').addEventListener('click', function () { setAll(function () { return true; }); });
+  document.getElementById('random').addEventListener('click', function () { setAll(function () { return Math.random() < 0.5; }); });
+
+  render();
+})();
+</script>
+</body>
+</html>
